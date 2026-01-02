@@ -4,6 +4,6 @@ django-email
 django-environ
 django-widget-tweaks
 pillow
-psycopg2
+psycopg2-binary
 sqlparse
 tzdata
