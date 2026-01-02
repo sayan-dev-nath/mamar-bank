@@ -15,16 +15,20 @@ from transactions.models import Transaction
 
 
 def send_transaction_email(user, amount, subject, template):
-    message = render_to_string(
-        template,
-        {
-            "user": user,
-            "amount": amount,
-        },
-    )
-    send_email = EmailMultiAlternatives(subject, "", to=[user.email])
-    send_email.attach_alternative(message, "text/html")
-    send_email.send()
+    """
+    Sends email safely. If SMTP fails, transaction still succeeds.
+    """
+    if os.environ.get("DEBUG_EMAIL") == "1":
+        print(f"[DEBUG EMAIL] {subject} to {user.email}, amount: {amount}")
+        return
+
+    try:
+        message = render_to_string(template, {"user": user, "amount": amount})
+        send_email = EmailMultiAlternatives(subject, "", to=[user.email])
+        send_email.attach_alternative(message, "text/html")
+        send_email.send()
+    except Exception as e:
+        print(f"[Email Error] Could not send email to {user.email}: {e}")
 
 
 class TransactionCreateMixin(LoginRequiredMixin, CreateView):
