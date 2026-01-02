@@ -14,14 +14,17 @@ from transactions.forms import DepositForm, WithdrawForm, LoanRequestForm
 from transactions.models import Transaction
 
 
+import os
+
+
 def send_transaction_email(user, amount, subject, template):
-    """
-    Sends email safely. If SMTP fails, transaction still succeeds.
-    """
+    """Send email safely"""
     if os.environ.get("DEBUG_EMAIL") == "1":
         print(f"[DEBUG EMAIL] {subject} to {user.email}, amount: {amount}")
         return
-
+    if not user.email:
+        print("[Email Skipped] User has no email")
+        return
     try:
         message = render_to_string(template, {"user": user, "amount": amount})
         send_email = EmailMultiAlternatives(subject, "", to=[user.email])
@@ -59,19 +62,24 @@ class DepositMoneyView(TransactionCreateMixin):
         amount = form.cleaned_data["amount"]
         account = self.request.user.account
 
-        account.balance += amount
-        account.save(update_fields=["balance"])
+        try:
+            account.balance += amount
+            account.save(update_fields=["balance"])
 
-        messages.success(
-            self.request,
-            f"{amount:,.2f}$ was deposited successfully",
-        )
-        send_transaction_email(
-            self.request.user,
-            amount,
-            "Deposit Message",
-            "transactions/deposite_email.html",
-        )
+            messages.success(
+                self.request,
+                f"{amount:,.2f}$ was deposited successfully",
+            )
+            send_transaction_email(
+                self.request.user,
+                amount,
+                "Deposit Message",
+                "transactions/deposite_email.html",
+            )
+        except Exception as e:
+            messages.error(self.request, f"Deposit failed: {e}")
+            return redirect("transaction_report")
+
         return super().form_valid(form)
 
 
@@ -162,21 +170,21 @@ class TransactionReportView(LoginRequiredMixin, ListView):
 class PayLoanView(LoginRequiredMixin, View):
     def get(self, request, loan_id):
         loan = get_object_or_404(Transaction, id=loan_id)
+        account = loan.account
 
         if loan.loan_approve:
-            account = loan.account
-
             if account.balance >= loan.amount:
-                account.balance -= loan.amount
-                account.save(update_fields=["balance"])
+                try:
+                    account.balance -= loan.amount
+                    account.save(update_fields=["balance"])
 
-                loan.transaction_type = LOAN_PAID
-                loan.balance_after_transaction = account.balance
-                loan.save()
-
-                return redirect("loan_list")
-
-            messages.error(request, "Insufficient balance")
+                    loan.transaction_type = LOAN_PAID
+                    loan.balance_after_transaction = account.balance
+                    loan.save()
+                except Exception as e:
+                    messages.error(request, f"Loan payment failed: {e}")
+            else:
+                messages.error(request, "Insufficient balance")
 
         return redirect("loan_list")
 
