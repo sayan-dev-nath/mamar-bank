@@ -103,9 +103,7 @@ WSGI_APPLICATION = "mamar_bank.wsgi.application"
 
 DATABASES = {
     "default": dj_database_url.config(
-        default="postgres://user:pass@localhost:5432/db",
-        conn_max_age=600,
-        ssl_require=True,
+        default="postgresql://postgres:postgres@localhost:5432/mysite", conn_max_age=600
     )
 }
 
