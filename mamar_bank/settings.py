@@ -91,7 +91,7 @@ WSGI_APPLICATION = "mamar_bank.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": env("DB_NAME"),
         "USER": env("DB_USER"),
         "PASSWORD": env("DB_PASSWORD"),
@@ -99,6 +99,7 @@ DATABASES = {
         "PORT": env("DB_PORT"),
     }
 }
+
 
 # DATABASES = {
 #     "default": dj_database_url.config(
